@@ -31,6 +31,14 @@ object Connect : SimpleCommand(
             getGroupOrNull()?.sendMessage("不能连线同一个群！")
             return
         }
+        if (activeGroups.contains(getGroupOrNull())){
+            getGroupOrNull()?.sendMessage("本群已开启连线！请勿重复开启")
+            return
+        }
+        if (activeGroups.contains(target)){
+            getGroupOrNull()?.sendMessage("目标群已开启连线！")
+            return
+        }
        try {
             target.sendMessage("有来自群 ${getGroupOrNull()?.name}(${getGroupOrNull()?.id}) 的申请！管理员发送同意即可开始连线")
         } catch (e: BotIsBeingMutedException){
@@ -57,6 +65,8 @@ object Connect : SimpleCommand(
                             }
                         }
                     }
+                    getGroupOrNull()?.sendMessage("目标群已同意")
+                    target.sendMessage("已开启连线")
                 }
                 else {
                     subject.sendMessage("权限不足！")
