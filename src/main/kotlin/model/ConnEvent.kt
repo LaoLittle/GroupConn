@@ -6,10 +6,10 @@ import net.mamoe.mirai.event.AbstractEvent
 import net.mamoe.mirai.message.data.Message
 
 class ConnEvent(
-    var message: Message,
-    var sender: User,
-    var group: Group,
-    var target: Group
+    val message: Message,
+    val sender: User,
+    val group: Group,
+    val target: Group
 ) : AbstractEvent()
 
-val activeGroups: MutableSet<Group> = mutableSetOf()
+val activeGroups: MutableMap<Group, Group> = mutableMapOf()
