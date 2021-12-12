@@ -9,6 +9,7 @@ import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.message.data.buildMessageChain
 import net.mamoe.mirai.utils.info
+import org.laolittle.plugin.groupconn.command.CloseConnection
 import org.laolittle.plugin.groupconn.command.Connect
 import org.laolittle.plugin.groupconn.command.List
 import org.laolittle.plugin.groupconn.model.ConnEvent
@@ -16,7 +17,7 @@ import org.laolittle.plugin.groupconn.model.ConnEvent
 object GroupConn : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.groupconn.GroupConn",
-        version = "1.0",
+        version = "1.0.1",
         name = "GroupConnector"
     ) {
         author("LaoLittle")
@@ -26,6 +27,7 @@ object GroupConn : KotlinPlugin(
     override fun onEnable() {
         List.register()
         Connect.register()
+        CloseConnection.register()
         logger.info { "Plugin loaded" }
         GlobalEventChannel.subscribeAlways<ConnEvent> {
             target.sendMessage(buildMessageChain {
@@ -33,8 +35,5 @@ object GroupConn : KotlinPlugin(
                 add(message)
             })
         }
-
-
     }
-
 }
