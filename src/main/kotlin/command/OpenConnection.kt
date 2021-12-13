@@ -14,12 +14,12 @@ import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.message.data.content
 import org.laolittle.plugin.groupconn.GroupConn
-import org.laolittle.plugin.groupconn.model.ConnEvent
+import org.laolittle.plugin.groupconn.model.ConnGroupMessageEvent
 import org.laolittle.plugin.groupconn.model.activeGroups
 
 @ConsoleExperimentalApi
 @ExperimentalCommandDescriptors
-object Connect : SimpleCommand(
+object OpenConnection : SimpleCommand(
     GroupConn, "conn", "connect", "open", "连接",
     description = "连接两个群"
 ) {
@@ -51,7 +51,7 @@ object Connect : SimpleCommand(
         }
         getGroupOrNull()?.sendMessage("正在等待目标群 ${target.name} 同意...")
         GlobalEventChannel.subscribe<GroupMessageEvent> {
-            if (subject == target && !activeGroups.contains(target))
+            if (subject == target)
                 if (message.content == "同意") {
                     if (sender.isOperator()) {
                         activeGroups[getGroupOrNull()!!] = target
@@ -60,19 +60,19 @@ object Connect : SimpleCommand(
                             if (!(activeGroups.contains(getGroupOrNull()) || activeGroups.contains(target))) return@Here ListeningStatus.STOPPED
                             when (subject) {
                                 getGroupOrNull() -> {
-                                    val event = ConnEvent(message, sender, getGroupOrNull()!!, target)
+                                    val event = ConnGroupMessageEvent(message, sender, getGroupOrNull()!!, target)
                                     event.broadcast()
                                 }
                                 target -> {
-                                    val event = ConnEvent(message, sender, target, getGroupOrNull()!!)
+                                    val event = ConnGroupMessageEvent(message, sender, target, getGroupOrNull()!!)
                                     event.broadcast()
                                 }
                             }
                             ListeningStatus.LISTENING
                         }
-                        getGroupOrNull()?.sendMessage("目标群已同意")
-                        target.sendMessage("已开启连线")
-                        ListeningStatus.STOPPED
+                        getGroupOrNull()?.sendMessage("目标群已同意，发送 \"dc\" 可断开连线")
+                        target.sendMessage("已开启连线，发送 \"dc\" 可断开连线")
+                        return@subscribe ListeningStatus.STOPPED
                     } else {
                         subject.sendMessage("权限不足！")
                     }
