@@ -25,7 +25,7 @@ import org.laolittle.plugin.groupconn.utils.DrawMessage.processMessageImg
 object GroupConn : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.groupconn.GroupConn",
-        version = "1.0.1",
+        version = "1.0.2",
         name = "GroupConnector"
     ) {
         author("LaoLittle")
