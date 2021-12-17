@@ -5,6 +5,7 @@ import net.mamoe.mirai.console.command.SimpleCommand
 import net.mamoe.mirai.console.command.descriptor.ExperimentalCommandDescriptors
 import net.mamoe.mirai.console.command.getGroupOrNull
 import net.mamoe.mirai.console.util.ConsoleExperimentalApi
+import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.contact.isOperator
 import org.laolittle.plugin.groupconn.GroupConn
 import org.laolittle.plugin.groupconn.model.activeGroups
@@ -19,21 +20,22 @@ object CloseConnection : SimpleCommand(
 
     @Handler
     suspend fun CommandSenderOnMessage<*>.handle() {
-        if (getGroupOrNull() == null) {
+        val group = getGroupOrNull()
+        if (group == null) {
             subject?.sendMessage("请在群聊下执行此命令！")
             return
         }
-        if (!activeGroups.contains(getGroupOrNull())){
-            getGroupOrNull()?.sendMessage("当前群聊并未有任何连接")
+        if (!activeGroups.contains(group)) {
+            group.sendMessage("当前群聊并未有任何连接")
+            return
         }
-        val sender = getGroupOrNull()?.get(user!!.id)
-        if (sender?.isOperator() == true) {
-            val target = activeGroups[getGroupOrNull()]
-            activeGroups.remove(getGroupOrNull())
+        val sender = fromEvent.sender as Member
+        if (sender.isOperator()) {
+            val target = activeGroups[group]
+            activeGroups.remove(group)
             activeGroups.remove(target)
-            getGroupOrNull()?.sendMessage("已关闭 ${target?.name} 的连接")
-            target?.sendMessage("群 ${getGroupOrNull()?.name} 主动关闭了一个现有连接")
-        }
-        else getGroupOrNull()?.sendMessage("仅管理员能够关闭连接！")
+            group.sendMessage("已关闭 ${target?.name} 的连接")
+            target?.sendMessage("群 ${group.name} 主动关闭了一个现有连接")
+        } else group.sendMessage("仅管理员能够关闭连接！")
     }
 }

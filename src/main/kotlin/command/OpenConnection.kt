@@ -27,57 +27,57 @@ object OpenConnection : SimpleCommand(
 
     @Handler
     suspend fun CommandSenderOnMessage<*>.handle(target: Group) {
-        if (getGroupOrNull() == null) {
-            subject?.sendMessage("请在群聊下执行此命令！")
+        val group = getGroupOrNull()
+        if (group == null) {
+            fromEvent.subject.sendMessage("请在群聊下执行此命令！")
             return
         }
-        if (target == getGroupOrNull()) {
-            getGroupOrNull()?.sendMessage("不能连线同一个群！")
+        if (target == group) {
+            group.sendMessage("不能连线同一个群！")
             return
         }
-        if (activeGroups.contains(getGroupOrNull())) {
-            getGroupOrNull()?.sendMessage("本群已开启连线！请勿重复开启")
+        if (activeGroups.contains(group)) {
+            group.sendMessage("本群已开启连线！请勿重复开启")
             return
         }
         if (activeGroups.contains(target)) {
-            getGroupOrNull()?.sendMessage("目标群已开启连线！")
+            group.sendMessage("目标群已开启连线！")
             return
         }
         try {
-            target.sendMessage("有来自群 ${getGroupOrNull()?.name}(${getGroupOrNull()?.id}) 的申请！管理员发送同意即可开始连线")
+            target.sendMessage("有来自群 ${group.name}(${group.id}) 的申请！管理员发送同意即可开始连线")
         } catch (e: BotIsBeingMutedException) {
-            getGroupOrNull()?.sendMessage("我在那个群被禁言了...无法发送申请")
+            group.sendMessage("我在那个群被禁言了...无法发送申请")
             return
         }
-        getGroupOrNull()?.sendMessage("正在等待目标群 ${target.name} 同意...")
+        group.sendMessage("正在等待目标群 ${target.name} 同意...")
         GlobalEventChannel.subscribe<GroupMessageEvent> {
             if (subject == target)
                 if (message.content == "同意") {
                     if (sender.isOperator()) {
-                        activeGroups[getGroupOrNull()!!] = target
-                        activeGroups[target] = getGroupOrNull()!!
+                        activeGroups[group] = target
+                        activeGroups[target] = group
                         GlobalEventChannel.subscribe<GroupMessageEvent> Here@{
-                            if (!(activeGroups.contains(getGroupOrNull()) || activeGroups.contains(target))) return@Here ListeningStatus.STOPPED
+                            if (!(activeGroups.contains(group) || activeGroups.contains(target))) return@Here ListeningStatus.STOPPED
                             when (subject) {
-                                getGroupOrNull() -> {
-                                    val event = ConnGroupMessageEvent(message, sender, getGroupOrNull()!!, target)
+                                group -> {
+                                    val event = ConnGroupMessageEvent(message, sender, group, target)
                                     event.broadcast()
                                 }
                                 target -> {
-                                    val event = ConnGroupMessageEvent(message, sender, target, getGroupOrNull()!!)
+                                    val event = ConnGroupMessageEvent(message, sender, target, group)
                                     event.broadcast()
                                 }
                             }
                             ListeningStatus.LISTENING
                         }
-                        getGroupOrNull()?.sendMessage("目标群已同意，发送 \"dc\" 可断开连线")
+                        group.sendMessage("目标群已同意，发送 \"dc\" 可断开连线")
                         target.sendMessage("已开启连线，发送 \"dc\" 可断开连线")
                         return@subscribe ListeningStatus.STOPPED
-                    } else {
-                        subject.sendMessage("权限不足！")
-                    }
+                    } else subject.sendMessage("权限不足！")
                 }
             ListeningStatus.LISTENING
         }
+
     }
 }
