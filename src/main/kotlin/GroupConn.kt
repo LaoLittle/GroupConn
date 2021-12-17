@@ -7,20 +7,20 @@ import net.mamoe.mirai.console.command.descriptor.ExperimentalCommandDescriptors
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescription
 import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
 import net.mamoe.mirai.console.util.ConsoleExperimentalApi
-import net.mamoe.mirai.contact.Contact.Companion.sendImage
 import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.ListeningStatus
 import net.mamoe.mirai.event.events.MessageRecallEvent.GroupRecall
 import net.mamoe.mirai.event.subscribeGroupMessages
-import net.mamoe.mirai.message.data.*
+import net.mamoe.mirai.message.data.buildMessageChain
+import net.mamoe.mirai.message.data.ids
+import net.mamoe.mirai.message.data.internalId
+import net.mamoe.mirai.message.data.time
 import net.mamoe.mirai.utils.info
 import org.laolittle.plugin.groupconn.command.CloseConnection
 import org.laolittle.plugin.groupconn.command.List
 import org.laolittle.plugin.groupconn.command.OpenConnection
 import org.laolittle.plugin.groupconn.model.ConnGroupMessageEvent
-import org.laolittle.plugin.groupconn.utils.DrawMessage.getHeadImg
-import org.laolittle.plugin.groupconn.utils.DrawMessage.processMessageImg
 
 object GroupConn : KotlinPlugin(
     JvmPluginDescription(
@@ -38,18 +38,14 @@ object GroupConn : KotlinPlugin(
         CloseConnection.register()
         logger.info { "跨群聊天初始化完成" }
         GlobalEventChannel.subscribeGroupMessages {
-            "teea" {
-                subject.sendImage(processMessageImg(getHeadImg(sender)))
-            }
         }
         GlobalEventChannel.subscribeAlways<ConnGroupMessageEvent> {
-         val sentOutMessage = target.sendMessage(buildMessageChain {
+            val sentOutMessage = target.sendMessage(buildMessageChain {
                 add(sender.nameCardOrNick + "\n")
-                add(message.toMessageChain())
+                add(message)
             })
-
-        val recallEvent = GlobalEventChannel.subscribe<GroupRecall> {
-                if ((messageIds.contentEquals(message.ids))&&(messageInternalIds.contentEquals(message.internalId))&&(messageTime == message.time)){
+            val recallEvent = GlobalEventChannel.subscribe<GroupRecall> {
+                if ((messageIds.contentEquals(message.ids)) && (messageInternalIds.contentEquals(message.internalId)) && (messageTime == message.time)) {
                     sentOutMessage.recall()
                     return@subscribe ListeningStatus.STOPPED
                 }
@@ -57,7 +53,8 @@ object GroupConn : KotlinPlugin(
             }
             this@GroupConn.launch {
                 delay(120_000)
-                recallEvent.complete()
+                if (!recallEvent.isCompleted)
+                    recallEvent.complete()
             }
         }
     }
