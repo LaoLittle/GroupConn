@@ -1,21 +1,25 @@
 package org.laolittle.plugin.groupconn.command
 
+import kotlinx.coroutines.delay
 import net.mamoe.mirai.console.command.CommandSenderOnMessage
 import net.mamoe.mirai.console.command.SimpleCommand
 import net.mamoe.mirai.console.command.descriptor.ExperimentalCommandDescriptors
-import net.mamoe.mirai.console.command.getGroupOrNull
 import net.mamoe.mirai.console.util.ConsoleExperimentalApi
 import net.mamoe.mirai.contact.BotIsBeingMutedException
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.isOperator
+import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.ListeningStatus
 import net.mamoe.mirai.event.broadcast
+import net.mamoe.mirai.event.events.BotMuteEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.message.data.content
+import net.mamoe.mirai.utils.error
 import org.laolittle.plugin.groupconn.GroupConn
+import org.laolittle.plugin.groupconn.model.ConnGroupDisconnectEvent
 import org.laolittle.plugin.groupconn.model.ConnGroupMessageEvent
-import org.laolittle.plugin.groupconn.model.activeGroups
+import org.laolittle.plugin.groupconn.model.connectedGroups
 
 @ConsoleExperimentalApi
 @ExperimentalCommandDescriptors
@@ -26,21 +30,25 @@ object OpenConnection : SimpleCommand(
     override val prefixOptional: Boolean = true //命令可免去斜杠
 
     @Handler
-    suspend fun CommandSenderOnMessage<*>.handle(target: Group) {
-        val group = getGroupOrNull()
-        if (group == null) {
-            fromEvent.subject.sendMessage("请在群聊下执行此命令！")
+    suspend fun CommandSenderOnMessage<*>.handle(target: Group? = null) {
+        val group = fromEvent.subject
+        if (target == null) {
+            group.sendMessage("请输入 ${fromEvent.message.content}+群号 来连接群聊")
+            return
+        }
+        if (group !is Group) {
+            group.sendMessage("请在群聊下执行此命令！")
             return
         }
         if (target == group) {
             group.sendMessage("不能连线同一个群！")
             return
         }
-        if (activeGroups.contains(group)) {
+        if (connectedGroups.contains(group)) {
             group.sendMessage("本群已开启连线！请勿重复开启")
             return
         }
-        if (activeGroups.contains(target)) {
+        if (connectedGroups.contains(target)) {
             group.sendMessage("目标群已开启连线！")
             return
         }
@@ -55,10 +63,9 @@ object OpenConnection : SimpleCommand(
             if (subject == target)
                 if (message.content == "同意") {
                     if (sender.isOperator()) {
-                        activeGroups[group] = target
-                        activeGroups[target] = group
-                        GlobalEventChannel.subscribe<GroupMessageEvent> Here@{
-                            if (!(activeGroups.contains(group) || activeGroups.contains(target))) return@Here ListeningStatus.STOPPED
+                        connectedGroups.add(group)
+                        connectedGroups.add(target)
+                        val openConnListener = GlobalEventChannel.subscribe<GroupMessageEvent> Here@{
                             when (subject) {
                                 group -> {
                                     val event = ConnGroupMessageEvent(message, sender, group, target)
@@ -70,6 +77,48 @@ object OpenConnection : SimpleCommand(
                                 }
                             }
                             ListeningStatus.LISTENING
+                        }
+                        val muteEventListener = GlobalEventChannel.subscribe<BotMuteEvent> Mute@{
+                            when (this.group) {
+                                group, target -> {
+                                    try {
+                                        group.sendMessage("我被群${target.name} 的${operator.nameCardOrNick} 禁言了，连接自动关闭")
+                                        target.sendMessage("我被群${group.name} 的${operator.nameCardOrNick} 禁言了，连接自动关闭")
+                                    } catch (_: BotIsBeingMutedException) {
+                                        GroupConn.logger.error { "在群${operator.group}被@${operator.nameCardOrNick}(${operator.id})禁言，群${group.name}(${group.id}) 与群${target.name}(${target.id}) 的连接自动关闭" }
+                                    }
+                                    val disconnectEvent = ConnGroupDisconnectEvent(group, operator)
+                                    disconnectEvent.broadcast()
+                                    ListeningStatus.STOPPED
+                                }
+                                else -> ListeningStatus.LISTENING
+                            }
+                        }
+                        GlobalEventChannel.subscribe<ConnGroupDisconnectEvent> Disconnect@{
+                            delay(1_000)
+                            when (this.group) {
+                                group, target -> {
+                                    if (!openConnListener.isCompleted)
+                                        openConnListener.complete()
+                                    if (!muteEventListener.isCompleted) {
+                                        muteEventListener.complete()
+                                        when(this.group){
+                                            group -> {
+                                                group.sendMessage("已关闭 ${target.name} 的连接")
+                                                target.sendMessage("群 ${group.name} 主动关闭了一个现有连接")
+                                            }
+                                            target -> {
+                                                target.sendMessage("已关闭 ${group.name} 的连接")
+                                                group.sendMessage("群 ${target.name} 主动关闭了一个现有连接")
+                                            }
+                                        }
+                                    }
+                                    connectedGroups.remove(group)
+                                    connectedGroups.remove(target)
+                                    ListeningStatus.STOPPED
+                                }
+                                else -> ListeningStatus.LISTENING
+                            }
                         }
                         group.sendMessage("目标群已同意，发送 \"dc\" 可断开连线")
                         target.sendMessage("已开启连线，发送 \"dc\" 可断开连线")
