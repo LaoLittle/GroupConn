@@ -11,7 +11,6 @@ import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.ListeningStatus
 import net.mamoe.mirai.event.events.MessageRecallEvent.GroupRecall
-import net.mamoe.mirai.event.subscribeGroupMessages
 import net.mamoe.mirai.message.data.buildMessageChain
 import net.mamoe.mirai.message.data.ids
 import net.mamoe.mirai.message.data.internalId
@@ -37,16 +36,32 @@ object GroupConn : KotlinPlugin(
         OpenConnection.register()
         CloseConnection.register()
         logger.info { "跨群聊天初始化完成" }
-        GlobalEventChannel.subscribeGroupMessages {
-        }
         GlobalEventChannel.subscribeAlways<ConnGroupMessageEvent> {
+            /*    val targetMessageSource = quotableMessage[message[QuoteReply]?.source]
+              group.sendMessage("""
+                   ${message[QuoteReply]?.source}
+                   $targetMessageSource
+                   ${quotableMessage[message[QuoteReply]?.source]}
+                   """.trimIndent())
+             */
             val sentOutMessage = target.sendMessage(buildMessageChain {
                 add(sender.nameCardOrNick + "\n")
                 add(message)
+                /*  if (targetMessageSource != null){
+                      when (targetMessageSource){
+                          message.source -> add(targetMessageSource.quote())
+                          else -> add(message.quote())
+                      }
+                  } */
+
             })
+
+            //   quotableMessage[message.source] = sentOutMessage.source
+
             val recallEvent = GlobalEventChannel.subscribe<GroupRecall> {
                 if ((messageIds.contentEquals(message.ids)) && (messageInternalIds.contentEquals(message.internalId)) && (messageTime == message.time)) {
                     sentOutMessage.recall()
+                    //   quotableMessage.remove(message.source)
                     return@subscribe ListeningStatus.STOPPED
                 }
                 ListeningStatus.LISTENING
