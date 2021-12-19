@@ -14,7 +14,7 @@ object List : SimpleCommand(
     suspend fun CommandSenderOnMessage<*>.handle() {
         val groups = buildForwardMessage(fromEvent.subject) {
             for ((i, group) in fromEvent.bot.groups.withIndex()) {
-                add(fromEvent.bot, PlainText("$i: ${group.name}(${group.id})"))
+                add(fromEvent.bot, PlainText("${i + 1}: ${group.name}(${group.id})"))
             }
         }
 

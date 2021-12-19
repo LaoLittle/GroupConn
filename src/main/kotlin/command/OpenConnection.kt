@@ -102,7 +102,7 @@ object OpenConnection : SimpleCommand(
                                         openConnListener.complete()
                                     if (!muteEventListener.isCompleted) {
                                         muteEventListener.complete()
-                                        when(this.group){
+                                        when (this.group) {
                                             group -> {
                                                 group.sendMessage("已关闭 ${target.name} 的连接")
                                                 target.sendMessage("群 ${group.name} 主动关闭了一个现有连接")

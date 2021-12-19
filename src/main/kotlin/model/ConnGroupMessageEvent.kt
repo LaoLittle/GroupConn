@@ -15,7 +15,5 @@ data class ConnGroupMessageEvent(
 data class ConnGroupDisconnectEvent(
     val group: Group,
     val sender: User
-): AbstractEvent()
-
-val connectedGroups: MutableSet<Group> = mutableSetOf()
+) : AbstractEvent()
 // val connectingGroups: MutableSet<Group> = mutableSetOf()
