@@ -8,7 +8,6 @@ import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.contact.isOperator
 import net.mamoe.mirai.event.broadcast
-import net.mamoe.mirai.utils.error
 import org.laolittle.plugin.groupconn.GroupConn
 import org.laolittle.plugin.groupconn.model.ConnGroupDisconnectEvent
 import org.laolittle.plugin.groupconn.model.connectedGroups
@@ -25,7 +24,7 @@ object CloseConnection : SimpleCommand(
     suspend fun CommandSenderOnMessage<*>.handle() {
         val group = fromEvent.subject
         if (group !is Group) {
-            subject?.sendMessage("请在群聊下执行此命令！") ?: GroupConn.logger.error { "请在群聊下执行此命令！" }
+            group.sendMessage("请在群聊下执行此命令！")
             return
         }
         if (!connectedGroups.contains(group)) {
