@@ -60,8 +60,8 @@ object OpenConnection : SimpleCommand(
         }
         group.sendMessage("正在等待目标群 ${target.name} 同意...")
         GlobalEventChannel.subscribe<GroupMessageEvent> {
-            if (subject == target)
-                if (message.content == "同意") {
+            if (message.content == "同意")
+                if (subject == target) {
                     if (sender.isOperator()) {
                         connectedGroups.add(group)
                         connectedGroups.add(target)
