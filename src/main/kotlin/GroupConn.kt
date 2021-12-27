@@ -11,7 +11,7 @@ import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.ListeningStatus
 import net.mamoe.mirai.event.events.MessageRecallEvent.GroupRecall
-import net.mamoe.mirai.message.data.buildMessageChain
+import net.mamoe.mirai.message.code.MiraiCode.deserializeMiraiCode
 import net.mamoe.mirai.message.data.ids
 import net.mamoe.mirai.message.data.internalId
 import net.mamoe.mirai.message.data.time
@@ -24,7 +24,7 @@ import org.laolittle.plugin.groupconn.model.ConnGroupMessageEvent
 object GroupConn : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.groupconn.GroupConn",
-        version = "1.0.2",
+        version = "1.1",
         name = "GroupConnector"
     ) {
         author("LaoLittle")
@@ -32,6 +32,7 @@ object GroupConn : KotlinPlugin(
 ) {
     @OptIn(ConsoleExperimentalApi::class, ExperimentalCommandDescriptors::class)
     override fun onEnable() {
+        GroupConnConfig.reload()
         List.register()
         OpenConnection.register()
         CloseConnection.register()
@@ -44,7 +45,17 @@ object GroupConn : KotlinPlugin(
                    ${quotableMessage[message[QuoteReply]?.source]}
                    """.trimIndent())
              */
-            val sentOutMessage = target.sendMessage(buildMessageChain {
+            val messageModel = GroupConnConfig.model
+                .replace("%昵称%", sender.nameCardOrNick)
+                .replace("%头衔%", sender.specialTitle)
+                .replace("%号码%", sender.id.toString())
+                .replace("%消息%", message.serializeToMiraiCode())
+                .replace("%发送群名%", group.name)
+                .replace("%发送群号%", group.id.toString())
+                .replace("%接收群名%", target.name)
+                .replace("%接收群号%", target.id.toString())
+            val sentOutMessage = target.sendMessage(messageModel.deserializeMiraiCode())
+            /*buildMessageChain {
                 add(sender.nameCardOrNick + "\n")
                 add(message)
                 /*  if (targetMessageSource != null){
@@ -54,7 +65,8 @@ object GroupConn : KotlinPlugin(
                       }
                   } */
 
-            })
+            }
+            */
 
             //   quotableMessage[message.source] = sentOutMessage.source
 
@@ -72,5 +84,9 @@ object GroupConn : KotlinPlugin(
                     recallEvent.complete()
             }
         }
+    }
+
+    override fun onDisable() {
+        logger.info { "所有跨群聊天已自动断开" }
     }
 }
