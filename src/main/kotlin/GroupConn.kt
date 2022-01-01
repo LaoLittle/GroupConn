@@ -11,7 +11,7 @@ import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.ListeningStatus
 import net.mamoe.mirai.event.events.MessageRecallEvent.GroupRecall
-import net.mamoe.mirai.message.code.MiraiCode.deserializeMiraiCode
+import net.mamoe.mirai.message.data.buildMessageChain
 import net.mamoe.mirai.message.data.ids
 import net.mamoe.mirai.message.data.internalId
 import net.mamoe.mirai.message.data.time
@@ -49,12 +49,16 @@ object GroupConn : KotlinPlugin(
                 .replace("%昵称%", sender.nameCardOrNick)
                 .replace("%头衔%", sender.specialTitle)
                 .replace("%号码%", sender.id.toString())
-                .replace("%消息%", message.serializeToMiraiCode())
                 .replace("%发送群名%", group.name)
                 .replace("%发送群号%", group.id.toString())
                 .replace("%接收群名%", target.name)
                 .replace("%接收群号%", target.id.toString())
-            val sentOutMessage = target.sendMessage(messageModel.deserializeMiraiCode())
+                .split("%消息%")
+            val sentOutMessage = target.sendMessage(buildMessageChain {
+                add(messageModel[0])
+                add(message)
+                add(messageModel[1])
+            })
             /*buildMessageChain {
                 add(sender.nameCardOrNick + "\n")
                 add(message)
